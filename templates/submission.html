@@ -1,0 +1,38 @@
+{%  extends "layout.html" %}
+{% block title %}Home{% endblock %}
+{% block body %}
+    <h1 class="text-center">A Spell Checker</h1>
+    <h2>Hi, {{ current_user.username }}!</h2>
+
+
+
+
+    <form action="" method="post">
+        {{ form.hidden_tag() }}
+    <p>
+        {{ form.inputtext.label }}<br>
+        {{ form.inputtext(cols=32, rows=4) }}<br>
+        {% for error in form.inputtext.errors %}
+        <span style="color:red;">[{{ error }}]</span>
+        {% endfor %}
+    </p>
+    <p>{{ form.submit() }}</p>
+    </form>
+
+
+
+
+    {% if post is defined %}
+    <p>
+        <h4>Submitted Text</h4>
+        <div id="textout">
+            {{ post.body }}<br>
+        </div>
+
+        <h4>Results</h4>
+        <div id="misspelled">
+            <b>{{ post.result }}</b><br>
+        </div>
+    </p>
+    {% endif %}
+{% endblock %}

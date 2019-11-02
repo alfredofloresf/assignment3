@@ -1,0 +1,27 @@
+{% extends "bootstrap/base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}
+Login
+{% endblock %}
+
+{% block styles %}
+{{super()}}
+<link rel="stylesheet" href="{{url_for('.static', filename='signin.css')}}">
+{% endblock %}
+
+{% block content %}
+    <dl>
+
+      <form>
+        {{ form.hidden_tag() }}
+        {{ wtf.form_field(form.inputtext) }}
+        <button class="btn btn-lg btn-primary btn-block" type="submit">submit</button>
+        {% if result %}
+        <p id="result">{{ result }} </p>
+        {% endif %}
+      </form>
+
+    </dl> <!-- /container -->
+
+{% endblock %}
