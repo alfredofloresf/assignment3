@@ -1,6 +1,7 @@
 from flask import Flask, render_template, redirect, url_for, make_response, flash, request
 from flask_bootstrap import Bootstrap
 from flask_wtf import FlaskForm
+from datetime import datetime
 from wtforms import StringField, PasswordField, BooleanField, validators
 from wtforms.validators import InputRequired, Email, Length, ValidationError
 from flask_sqlalchemy  import SQLAlchemy
@@ -10,8 +11,8 @@ from subprocess import check_output
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'Thisissupposedtobesecret!'
-#app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////home/appsec/PycharmProjects/Part2/database.db'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////home/appsec/PycharmProjects/Assignment3/database.db'
+#app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 bootstrap = Bootstrap(app)
 db = SQLAlchemy(app)
 login_manager = LoginManager()
@@ -23,7 +24,7 @@ login_manager.login_view = 'login'
 def validate_phone(form, field):
 
     if len(field.data) > 14:
-        raise ValidationError('Failure: This is an invalid phone number, too many characters')
+        raise ValidationError('Failure: This is an invalid phone number Phone numbers must contain 10 digits')
     else:
         sanitized_phone_number = field.data.strip(' ()-')
         if len(sanitized_phone_number) == 10 or len(sanitized_phone_number) == 11:
@@ -39,10 +40,29 @@ def validate_phone(form, field):
 
 
 class User(UserMixin, db.Model):
+    __tablename__='user'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(15), unique=True)
     twofa = db.Column(db.String(50))
     password = db.Column(db.String(80))
+    # last_login_time = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+    # last_logout_time = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+
+class UserLoginHistory(db.Model):
+    __tablename__ = 'user_login_history'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    time_login = db.Column(db.DateTime, nullable=False)
+    time_logout = db.Column(db.DateTime, nullable=True)
+#
+# class QueryRecord(db.Model):
+#     __tablename__ = 'query_records'
+#     record_number =  db.Column(db.Integer, primary_key=True, autoincrement=True)
+#     id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+#     query_text = db.Column(db.Text, nullable=True)
+#     query_result  = db.Column(db.Text, nullable=True)
+#     time = db.Column(db.DateTime, nullable=False)
+#     user = db.relationship(User)
 
 
 
@@ -56,6 +76,12 @@ class LoginForm(FlaskForm):
     twofa = StringField('two_fa', id='2fa', validators=[validate_phone, validators.Optional()])
     remember = BooleanField('remember me')
 
+class HistoryForm(FlaskForm):
+    username = StringField('Username', id='uname', validators=[InputRequired(), Length(min=4, max=15)])
+    password = PasswordField('Password', id='pword', validators=[InputRequired(), Length(min=4, max=20)])
+    twofa = StringField('two_fa', id='2fa', validators=[validate_phone, validators.Optional()])
+    remember = BooleanField('remember me')
+
 class RegisterForm(FlaskForm):
     username = StringField('Username', id='uname', validators=[InputRequired(), Length(min=4, max=15)])
     password = PasswordField('Password', id='pword', validators=[InputRequired(), Length(min=4, max=20)])
@@ -66,12 +92,6 @@ class RegisterForm(FlaskForm):
         user = User.query.filter_by(username=username.data).first()
         if user is not None:
             raise ValidationError('Failure: Username is already in use')
-
-
-
-    #twofa = StringField('2fa', id = '2fa', validators=[validate_phone, validators.Optional()])
-
-
 
 
 
@@ -95,12 +115,36 @@ def login():
                 login_user(user, remember=form.remember.data)
                 result = "success"
                 return render_template('login.html', form=form, result=result)
-        #result = "incorrect"
-        #return '<h1>Invalid username or password</h1>'
-        #return '<h1>' + form.uname.data + ' ' + form.pword.data + '</h1>'
-
     return render_template('login.html', form=form, result=result)
 
+
+
+@app.route('/history', methods=['GET', 'POST'])
+def history():
+    form = LoginForm()
+    result = None
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.username.data).first()
+        if user:
+            if check_password_hash(user.password, form.password.data):
+                login_user(user, remember=form.remember.data)
+                result = "success"
+                return render_template('history.html', form=form, result=result)
+    return render_template('history.html', form=form, result=result)
+
+
+@app.route('/login_history', methods=['GET', 'POST'])
+def login_history():
+    form = LoginForm()
+    result = None
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.username.data).first()
+        if user:
+            if check_password_hash(user.password, form.password.data):
+                login_user(user, remember=form.remember.data)
+                result = "success"
+                return render_template('login_history.html', form=form, result=result)
+    return render_template('login_history.html', form=form, result=result)
 
 @app.route('/spell_check', methods=['GET', 'POST'])
 @login_required
