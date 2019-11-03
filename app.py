@@ -173,8 +173,8 @@ def register():
         new_user = User(username=form.username.data, twofa=form.twofa.data, password=hashed_password)
         db.session.add(new_user)
         db.session.commit()
-        #return '<h1 id="success">success</h1>'
-        flash('Your account has been created! You are not able to log in', 'success')
+        return '<h1 id="success">success</h1>'
+        #flash('Your account has been created! You are not able to log in', 'success')
         return redirect(url_for('login'))
     return render_template('register.html', form=form)
 
