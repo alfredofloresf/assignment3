@@ -11,8 +11,8 @@ from subprocess import check_output
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'Thisissupposedtobesecret!'
-#app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////home/appsec/PycharmProjects/Assignment3/database.db'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////home/appsec/PycharmProjects/Assignment3/database.db'
+#app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 bootstrap = Bootstrap(app)
 db = SQLAlchemy(app)
 login_manager = LoginManager()
@@ -42,7 +42,7 @@ def validate_phone(form, field):
 class User(UserMixin, db.Model):
     __tablename__='user'
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(15), unique=True)
+    username = db.Column(db.String(15), unique=True, nullable=False)
     twofa = db.Column(db.String(50))
     password = db.Column(db.String(80))
     # last_login_time = db.Column(db.DateTime, index=True, default=datetime.utcnow)
@@ -173,7 +173,9 @@ def register():
         new_user = User(username=form.username.data, twofa=form.twofa.data, password=hashed_password)
         db.session.add(new_user)
         db.session.commit()
-        return '<h1 id="success">success</h1>'
+        #return '<h1 id="success">success</h1>'
+        flash('Your account has been created! You are not able to log in', 'success')
+        return redirect(url_for('login'))
     return render_template('register.html', form=form)
 
 
