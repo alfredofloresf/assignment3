@@ -2,8 +2,8 @@ from flask import Flask, render_template, redirect, url_for, make_response, flas
 from flask_bootstrap import Bootstrap
 from flask_wtf import FlaskForm
 from datetime import datetime
-from wtforms import StringField, PasswordField, BooleanField, validators
-from wtforms.validators import InputRequired, Email, Length, ValidationError
+from wtforms import StringField, PasswordField, BooleanField, validators, SubmitField, TextAreaField, IntegerField
+from wtforms.validators import InputRequired, Email, Length, ValidationError, DataRequired
 from flask_sqlalchemy  import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -40,31 +40,22 @@ def validate_phone(form, field):
 
 
 class User(UserMixin, db.Model):
-    __tablename__='user'
+    __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(15), unique=True, nullable=False)
     twofa = db.Column(db.String(50))
     password = db.Column(db.String(80))
-    # last_login_time = db.Column(db.DateTime, index=True, default=datetime.utcnow)
-    # last_logout_time = db.Column(db.DateTime, index=True, default=datetime.utcnow)
-
-class UserLoginHistory(db.Model):
-    __tablename__ = 'user_login_history'
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    time_login = db.Column(db.DateTime, nullable=False)
-    time_logout = db.Column(db.DateTime, nullable=True)
+#     service_history_records = db.relationship("UserQueryHistory", backref="user")
+#     login_history_records = db.relationship("UserLoginHistory", backref="'user")
 #
-# class QueryRecord(db.Model):
-#     __tablename__ = 'query_records'
-#     record_number =  db.Column(db.Integer, primary_key=True, autoincrement=True)
-#     id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-#     query_text = db.Column(db.Text, nullable=True)
-#     query_result  = db.Column(db.Text, nullable=True)
-#     time = db.Column(db.DateTime, nullable=False)
-#     user = db.relationship(User)
+class Log(db.Model):
+    __tablename__ = 'log'
+    id = db.Column('id', db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    login = db.Column(db.DateTime)
+    logout = db.Column(db.DateTime)
 
-
+##################################################################################################################
 
 class SpellForm(FlaskForm):
     inputtext = StringField('CheckText', id='inputtext', validators=[InputRequired()])
@@ -72,15 +63,17 @@ class SpellForm(FlaskForm):
 class LoginForm(FlaskForm):
     username = StringField('Username', id='uname', validators=[InputRequired(), Length(min=4, max=15)])
     password = PasswordField('Password', id='pword', validators=[InputRequired(), Length(min=4, max=20)])
-    # twofa = StringField('2fa', id='2fa', validators=[InputRequired(), Length(max=50)])
     twofa = StringField('two_fa', id='2fa', validators=[validate_phone, validators.Optional()])
     remember = BooleanField('remember me')
 
-class HistoryForm(FlaskForm):
-    username = StringField('Username', id='uname', validators=[InputRequired(), Length(min=4, max=15)])
-    password = PasswordField('Password', id='pword', validators=[InputRequired(), Length(min=4, max=20)])
-    twofa = StringField('two_fa', id='2fa', validators=[validate_phone, validators.Optional()])
-    remember = BooleanField('remember me')
+class LoginHistoryForm(FlaskForm):
+    username = StringField('Enter a username', validators=[InputRequired()], id='userid')
+    submit = SubmitField("submit")
+
+class HistoryQueryForm(FlaskForm):
+    query_text = TextAreaField('Query Text', id='querytext', render_kw={'readonly': True})
+    query_results = TextAreaField('Query Results', id='queryresults', render_kw={'readonly': True})
+
 
 class RegisterForm(FlaskForm):
     username = StringField('Username', id='uname', validators=[InputRequired(), Length(min=4, max=15)])
@@ -93,7 +86,7 @@ class RegisterForm(FlaskForm):
         if user is not None:
             raise ValidationError('Failure: Username is already in use')
 
-
+####################################################################################################################
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -108,13 +101,20 @@ def index():
 def login():
     form = LoginForm()
     result = None
+
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user:
             if check_password_hash(user.password, form.password.data):
                 login_user(user, remember=form.remember.data)
+               # time_login = datetime.now()
                 result = "success"
+                # login_user(user, remember=form.remember.data)
+                new_login = Log(user_id=user.id, login=datetime.now(), logout=None)
+                db.session.add(new_login)
+                db.session.commit()
                 return render_template('login.html', form=form, result=result)
+        return redirect(url_for('index'))
     return render_template('login.html', form=form, result=result)
 
 
@@ -135,16 +135,25 @@ def history():
 
 @app.route('/login_history', methods=['GET', 'POST'])
 def login_history():
-    form = LoginForm()
-    result = None
-    if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
-        if user:
-            if check_password_hash(user.password, form.password.data):
-                login_user(user, remember=form.remember.data)
-                result = "success"
-                return render_template('login_history.html', form=form, result=result)
-    return render_template('login_history.html', form=form, result=result)
+    if current_user.is_authenticated and current_user.is_admin():
+        form = LoginHistoryForm()
+        if form.validate_on_submit():
+            user = User.query.filter_by(username=form.username.data).first()
+            try:
+                logs_in = user.get_logs_in().split('{cut}')
+                logs_out = user.get_logs_out().split('{cut}')
+            except: #NoneType
+                return render_template('Login_history.html', title="No Logs to Show", form=form, flag=False)
+            print(logs_in)
+            print(logs_out)
+            return render_template('Login_history.html', title="Login History", name=form.username.data,
+                                   logs_in=logs_in, logs_out=logs_out, flag=True, form=form)
+        else:
+            return render_template('Login_history.html', title="Login History", form=form, flag=False)
+    else:
+        return redirect('index')
+
+
 
 @app.route('/spell_check', methods=['GET', 'POST'])
 @login_required
@@ -175,7 +184,7 @@ def register():
         db.session.commit()
         return '<h1 id="success">success</h1>'
         #flash('Your account has been created! You are not able to log in', 'success')
-        return redirect(url_for('login'))
+        return redirect(url_for('index'))
     return render_template('register.html', form=form)
 
 
@@ -184,6 +193,8 @@ def register():
 @login_required
 def logout():
     logout_user()
+    time_logout = datetime.now()
+    result = time_logout
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
