@@ -1,26 +1,42 @@
 {% extends "bootstrap/base.html" %}
-{% import "bootstrap/wtf.html" as wtf %}
-
-{% block title %}
-Login
-{% endblock %}
-
-{% block styles %}
-{{super()}}
-<link rel="stylesheet" href="{{url_for('.static', filename='signin.css')}}">
-{% endblock %}
 
 {% block content %}
-    <div class="container">
 
-      <form class="form-signin" method="POST" action="/login_history">
-        <h2 class="form-signin-heading">Login History</h2>
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+<ul>
+        {% for message in messages %}
+        <li>{{ message }}</li>
+        {% endfor %}
+</ul>
+{% endif %}
+{% endwith %}
+
+
+    {% if form %}
+    <h1>Login History Search</h1>
+    <form action="" method="post" value="" autocomplete="off">
         {{ form.hidden_tag() }}
-        {{ wtf.form_field(form.username) }}
+        <p>
+            {{ form.uid.label }}<br>
+            {{ form.uid(size=32) }}<br>
+            {% for error in form.uid.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>{{ form.submit() }}</p>
+    </form>
+    {% else %}
 
-        <button class="btn btn-lg btn-primary btn-block" type="submit">Search</button>
-      </form>
+    <h1>Login History Search Result</h1>
 
-    </div> <!-- /container -->
-<p id="result">{{ result }} </p>
+    {% for login in logins %}
+    <p id=login{{ login.id }}>
+    Session {{ login.id }} login_time: <b id=login{{ login.id }}_time>{{ login.login_time }}</b>
+	logout_time: <b id=logout{{ login.id }}_time>{{ login.logout_time }}</b>
+    </p>
+    {% endfor %}
+
+    {% endif %}
+
 {% endblock %}

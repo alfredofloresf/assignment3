@@ -45,15 +45,16 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(15), unique=True, nullable=False)
     twofa = db.Column(db.String(50))
     password = db.Column(db.String(80))
+    logins = db.relationship('Login', backref='author')
 #     service_history_records = db.relationship("UserQueryHistory", backref="user")
 #     login_history_records = db.relationship("UserLoginHistory", backref="'user")
 #
-class Log(db.Model):
-    __tablename__ = 'log'
+class Login(db.Model):
+    __tablename__ = 'login'
     id = db.Column('id', db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    login = db.Column(db.DateTime)
-    logout = db.Column(db.DateTime)
+    login_time = db.Column(db.DateTime)
+    logout_time = db.Column(db.DateTime)
 
 ##################################################################################################################
 
@@ -66,9 +67,13 @@ class LoginForm(FlaskForm):
     twofa = StringField('two_fa', id='2fa', validators=[validate_phone, validators.Optional()])
     remember = BooleanField('remember me')
 
+class HistoryForm(FlaskForm):
+    uname = StringField('Username', validators=[DataRequired()], id="userquery")
+    submit = SubmitField('Search')
+
 class LoginHistoryForm(FlaskForm):
-    username = StringField('Enter a username', validators=[InputRequired()], id='userid')
-    submit = SubmitField("submit")
+    uid = StringField('UserID', validators=[DataRequired()], id="userid")
+    submit = SubmitField('Search')
 
 class HistoryQueryForm(FlaskForm):
     query_text = TextAreaField('Query Text', id='querytext', render_kw={'readonly': True})
@@ -110,7 +115,7 @@ def login():
                # time_login = datetime.now()
                 result = "success"
                 # login_user(user, remember=form.remember.data)
-                new_login = Log(user_id=user.id, login=datetime.now(), logout=None)
+                new_login = Login(user_id=user.id, login_time=datetime.now(), logout_time=None)
                 db.session.add(new_login)
                 db.session.commit()
                 return render_template('login.html', form=form, result=result)
@@ -119,39 +124,35 @@ def login():
 
 
 
-@app.route('/history', methods=['GET', 'POST'])
+@app.route('/history', methods=['GET'])
 def history():
-    form = LoginForm()
-    result = None
-    if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
-        if user:
-            if check_password_hash(user.password, form.password.data):
-                login_user(user, remember=form.remember.data)
-                result = "success"
-                return render_template('history.html', form=form, result=result)
-    return render_template('history.html', form=form, result=result)
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
+    if current_user.username == "admin":
+        return redirect(url_for('history_query'))
+    else:
+        posts = current_user.spellcheck_posts().all()
+        posts_count = current_user.spellcheck_posts().count()
+        return render_template("history.html", title='History Page', posts=posts, count=posts_count)
 
 
 @app.route('/login_history', methods=['GET', 'POST'])
 def login_history():
-    if current_user.is_authenticated and current_user.is_admin():
-        form = LoginHistoryForm()
-        if form.validate_on_submit():
-            user = User.query.filter_by(username=form.username.data).first()
-            try:
-                logs_in = user.get_logs_in().split('{cut}')
-                logs_out = user.get_logs_out().split('{cut}')
-            except: #NoneType
-                return render_template('Login_history.html', title="No Logs to Show", form=form, flag=False)
-            print(logs_in)
-            print(logs_out)
-            return render_template('Login_history.html', title="Login History", name=form.username.data,
-                                   logs_in=logs_in, logs_out=logs_out, flag=True, form=form)
-        else:
-            return render_template('Login_history.html', title="Login History", form=form, flag=False)
-    else:
-        return redirect('index')
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
+    if current_user.username != "admin":
+        flash('Not authorized for login history search')
+        return redirect(url_for('index'))
+    form = LoginHistoryForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(id=form.uid.data).first()
+        if user is None:
+            flash('No such userid')
+            return redirect(url_for('login_history'))
+        print("UserID:", user.id)
+        logins = user.login_logs(user.id).all()
+        return render_template("login_history.html", title='Login History Page', logins=logins)
+    return render_template('login_history.html', title='Login History', form=form)
 
 
 
@@ -192,9 +193,11 @@ def register():
 @app.route('/logout')
 @login_required
 def logout():
+    login = Login.query.filter_by(user_id=current_user.id).order_by(Login.id.desc()).first()
+    login.logout_time = datetime.now()
     logout_user()
-    time_logout = datetime.now()
-    result = time_logout
+    db.session.commit()
+
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
