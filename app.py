@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, make_response, flash, request
+from flask import Flask, render_template, redirect, url_for, make_response, flash, request, session
 from flask_bootstrap import Bootstrap
 from flask_wtf import FlaskForm
 from datetime import datetime
@@ -8,11 +8,12 @@ from flask_sqlalchemy  import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from subprocess import check_output
+from sqlalchemy.orm import relationship, sessionmaker
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'Thisissupposedtobesecret!'
-#app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////home/appsec/PycharmProjects/Assignment3/database.db'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////home/appsec/PycharmProjects/Assignment3/database.db'
+#app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 bootstrap = Bootstrap(app)
 db = SQLAlchemy(app)
 login_manager = LoginManager()
@@ -45,16 +46,15 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(15), unique=True, nullable=False)
     twofa = db.Column(db.String(50))
     password = db.Column(db.String(80))
-    logins = db.relationship('Login', backref='author')
-#     service_history_records = db.relationship("UserQueryHistory", backref="user")
-#     login_history_records = db.relationship("UserLoginHistory", backref="'user")
-#
+    role = db.Column(db.String(6), nullable=True)
+
 class Login(db.Model):
     __tablename__ = 'login'
-    id = db.Column('id', db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    login_time = db.Column(db.DateTime)
-    logout_time = db.Column(db.DateTime)
+    id = db.Column(db.Integer, nullable=False, autoincrement = True, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    login_time = db.Column(db.DateTime, index=True)
+    logout_time = db.Column(db.DateTime, index=True)
+
 
 ##################################################################################################################
 
@@ -138,22 +138,34 @@ def history():
 
 @app.route('/login_history', methods=['GET', 'POST'])
 def login_history():
-    if not current_user.is_authenticated:
-        return redirect(url_for('login'))
-    if current_user.username != "admin":
-        flash('Not authorized for login history search')
-        return redirect(url_for('index'))
-    form = LoginHistoryForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(id=form.uid.data).first()
-        if user is None:
-            flash('No such userid')
-            return redirect(url_for('login_history'))
-        print("UserID:", user.id)
-        logins = user.login_logs(user.id).all()
-        return render_template("login_history.html", title='Login History Page', logins=logins)
-    return render_template('login_history.html', title='Login History', form=form)
+    # if not current_user.is_authenticated:
+    #     return redirect(url_for('login'))
+    # if current_user.username != "admin":
+    #     flash('Not authorized for login history search')
+    #     return redirect(url_for('index'))
+    # form = LoginHistoryForm()
+    # if form.validate_on_submit():
+    #     user = User.query.filter_by(id=form.uid.data).first()
+    #     if user is None:
+    #         flash('No such userid')
+    #         return redirect(url_for('login_history'))
+    #     print("UserID:", user.id)
+    #     logins = user.login_logs(user.id).all()
+    #     return render_template("login_history.html", title='Login History Page', logins=logins)
+    # return render_template('login_history.html', title='Login History', form=form)
 
+
+
+    if session.get('logged_in') == True and session['role'] == 'admin':
+        admin = True
+        if request.method =='GET':
+            queries = Login.query.order_by(Login.id)
+        if request.method =='POST':
+            search_user = request.form['userid'].lower()
+            queries = Login.query.filter_by(user_id =search_user).order_by(Login.id)
+        return render_template('login_history.html', queries=queries, admin=admin)
+    else:
+        return redirect(url_for('spell_check'))
 
 
 @app.route('/spell_check', methods=['GET', 'POST'])

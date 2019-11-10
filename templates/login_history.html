@@ -1,42 +1,93 @@
 {% extends "bootstrap/base.html" %}
 
+{% block title %}
+Text to check
+{% endblock %}
+
 {% block content %}
+<div class="container">
+    <a href="{{url_for('logout')}}">Logout</a> | <a href="{{url_for('history')}}">Query History</a> {% if admin %}| <a href="{{url_for('login_history')}}">Login and Logout History</a> {% endif %}
+    <hr>
+    <div class="row">
+        <div class="col-1"></div>
+        <div class="col-10">
+            <form method="post" autocomplete="off">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    {% if admin %}
+                    <input name="userid" id="userid"  class="form-control" placeholder="Search a User" pattern ="^((?!(<script(\s|\S)*?<\/script>)|(<style(\s|\S)*?<\/style>)|(<!--(\s|\S)*?-->)|(<\/?(\s|\S)*?>)).)*$" required autofocus>
+                    <input type="submit" class="btn btn-lg btn-primary btn-block" value="Search">
+                    {% endif %}
 
-{% with messages = get_flashed_messages() %}
-{% if messages %}
-<ul>
-        {% for message in messages %}
-        <li>{{ message }}</li>
-        {% endfor %}
-</ul>
-{% endif %}
-{% endwith %}
 
+                <h1 class="h3 mb-3 font-weight-normal">Login Logout History</h1>
+                <table class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th>ID </th>
+                        <th>Username</th>
+                        <th>Login</th>
+                        <th>Logout</th>
 
-    {% if form %}
-    <h1>Login History Search</h1>
-    <form action="" method="post" value="" autocomplete="off">
-        {{ form.hidden_tag() }}
-        <p>
-            {{ form.uid.label }}<br>
-            {{ form.uid(size=32) }}<br>
-            {% for error in form.uid.errors %}
-            <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>{{ form.submit() }}</p>
-    </form>
-    {% else %}
+                    </tr>
+                </thead>
+                <tbody>
+                {% for query in queries %}
+                    <tr>
+                    <td><p id=login{{query.id}}>{{ query.id }}</p></td>
+                    <td>{{ query.user_id }}</td>
+                    <td><p id=login{{query.id}}_time>{{ query.login_time }}</p></td>
+                    <td><p id=logout{{query.id}}_time>{{ query.logout_time if (query.logout_time) else 'N/A'}}</p></td>
 
-    <h1>Login History Search Result</h1>
-
-    {% for login in logins %}
-    <p id=login{{ login.id }}>
-    Session {{ login.id }} login_time: <b id=login{{ login.id }}_time>{{ login.login_time }}</b>
-	logout_time: <b id=logout{{ login.id }}_time>{{ login.logout_time }}</b>
-    </p>
-    {% endfor %}
-
-    {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+               </table>
+            </form>
+        </div>
+        <div class="col-1"></div>
+    </div>
+</div>
 
 {% endblock %}
+
+
+<!--{% block content %}-->
+
+<!--{% with messages = get_flashed_messages() %}-->
+<!--{% if messages %}-->
+<!--<ul>-->
+<!--        {% for message in messages %}-->
+<!--        <li>{{ message }}</li>-->
+<!--        {% endfor %}-->
+<!--</ul>-->
+<!--{% endif %}-->
+<!--{% endwith %}-->
+
+
+<!--    {% if form %}-->
+<!--    <h1>Login History Search</h1>-->
+<!--    <form action="" method="post" value="" autocomplete="off">-->
+<!--        {{ form.hidden_tag() }}-->
+<!--        <p>-->
+<!--            {{ form.uid.label }}<br>-->
+<!--            {{ form.uid(size=32) }}<br>-->
+<!--            {% for error in form.uid.errors %}-->
+<!--            <span style="color: red;">[{{ error }}]</span>-->
+<!--            {% endfor %}-->
+<!--        </p>-->
+<!--        <p>{{ form.submit() }}</p>-->
+<!--    </form>-->
+<!--    {% else %}-->
+
+<!--    <h1>Login History Search Result</h1>-->
+
+<!--    {% for login in logins %}-->
+<!--    <p id=login{{ login.id }}>-->
+<!--    Session {{ login.id }} login_time: <b id=login{{ login.id }}_time>{{ login.login_time }}</b>-->
+<!--	logout_time: <b id=logout{{ login.id }}_time>{{ login.logout_time }}</b>-->
+<!--    </p>-->
+<!--    {% endfor %}-->
+
+<!--    {% endif %}-->
+
+<!--{% endblock %}-->
