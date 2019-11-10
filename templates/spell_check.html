@@ -13,14 +13,19 @@ Login
 {% block content %}
     <dl>
 
-      <form>
-        {{ form.hidden_tag() }}
-        {{ wtf.form_field(form.inputtext) }}
-        <button class="btn btn-lg btn-primary btn-block" type="submit">submit</button>
-        {% if result %}
-        <p id="result">{{ result }} </p>
-        {% endif %}
-      </form>
+        <form action="{{ url_for('spell_check') }}" method="POST">
+           {{ form.csrf_token }}
+           <p>{{ form.inputtext.label }}</p>
+           {{ form.inputtext }}
+            {% for error in form.inputtext.errors %}
+                <p class="error">[{{ error }}]</p>
+            {% endfor %}
+            <p>{{ form.submit() }}</p>
+        </form>
+        <p>{{ form.textout.label }}</p>
+        <p>{{ form.textout }}</p>
+        <p>{{ form.misspelled.label }}</p>
+        <p>{{ form.misspelled }}</p>
 
     </dl> <!-- /container -->
 
