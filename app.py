@@ -64,14 +64,19 @@ class Submission(db.Model):
       text = db.Column(db.String(500))
       result = db.Column(db.String(500))
 
+class Spelling_History(db.Model):
+    __tablename__ = "spelling_history"
+    id = db.Column(db.Integer, primary_key=True)
+    query_text = db.Column(db.String(), nullable=False)
+    query_result = db.Column(db.String(), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+
 
 ##################################################################################################################
-
-class SpellForm(FlaskForm):
+class SpellCheckForm(FlaskForm):
     inputtext = TextAreaField('Text', validators=[InputRequired()], id="inputtext", render_kw={"rows": 4, "cols": 100})
     textout = TextAreaField('Text out', id="textout", render_kw={"disabled": "disabled", "rows": 4, "cols": 100})
-    misspelled = TextAreaField('Misspelled', id="misspelled",
-                               render_kw={"disabled": "disabled", "rows": 4, "cols": 100})
+    misspelled = TextAreaField('Misspelled', id="misspelled", render_kw={"disabled": "disabled", "rows": 4, "cols": 100})
     submit = SubmitField('Submit')
 
 class LoginForm(FlaskForm):
@@ -171,8 +176,6 @@ def login_history():
     #     return render_template("login_history.html", title='Login History Page', logins=logins)
     # return render_template('login_history.html', title='Login History', form=form)
 
-
-
     if session.get('logged_in') == True and session['role'] == 'admin':
         admin = True
         if request.method =='GET':
@@ -185,37 +188,21 @@ def login_history():
         return redirect(url_for('spell_check'))
 
 
-# @app.route('/spell_check', methods=['GET', 'POST'])
-# @login_required
-# def spell_check():
-#     form = SpellForm()
-#     return render_template('spell_check.html', form=form)
-#     textout = None
-#     misspelled = None
-#     if request.method == 'POST':
-#         inputtext = form.inputtext.data
-#         textout = inputtext
-#         with open ("words.txt", "w") as fo:
-#             fo.write(inputtext)
-#         output = (check_output(["./a.out", "words.txt", "wordlist.txt"], universal_newlines=True))
-#         misspelled = output.replace("\n",",").strip().strip(',')
-#     response = make_response(render_template('spell_check.html', form=form, textout=textout, misspelledd=misspelled))
-#     response.headers['Content-Security-Policy'] = "default-scr 'self'"
-#     return response
-
-@app.route("/spell_check", methods=['POST', 'GET'])
+@app.route('/spell_check',methods = ['GET', 'POST'])
 def spell_check():
     if 'user_id' in session:
-        form = SpellForm()
+        form = SpellCheckForm()
         if form.validate_on_submit():
             text = form.inputtext.data
-
+            # set textout field to be input text
             form.textout.data = form.inputtext.data
             form.inputtext.data = ""
 
+            # define filename to include user_id and a random number
             user_id = session['user_id']
             filename = str(user_id) + '-' + str(random.randint(1, 1000)) + '.txt'
 
+            # create file and set output of check_words to misspelled input text
             with open(filename, 'w') as f:
                 f.write(str(text))
                 f.close()
