@@ -3,13 +3,14 @@
   <component name="ChangeListManager">
     <list default="true" id="6c90b574-6e9c-4575-94aa-a12e27cff8d4" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/1-153.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/1-453.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/a.out" beforeDir="false" afterPath="$PROJECT_DIR$/a.out" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/1-162.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/1-401.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/1-914.txt" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/database.db" beforeDir="false" afterPath="$PROJECT_DIR$/database.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/submission.db" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/login_history.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/login_history.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/templates/spell_check.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/spell_check.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/submission.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/submission.html" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -99,16 +100,5 @@
         </entry>
       </map>
     </option>
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/app.py</url>
-          <line>190</line>
-          <option name="timeStamp" value="2" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
 </project>

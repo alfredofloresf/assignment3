@@ -52,7 +52,7 @@ class User(UserMixin, db.Model):
 
 class Login(db.Model):
     __tablename__ = 'login'
-    id = db.Column(db.Integer, nullable=False, autoincrement = True, primary_key=True)
+    id = db.Column(db.Integer, nullable=False, autoincrement=True, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     login_time = db.Column(db.DateTime, index=True)
     logout_time = db.Column(db.DateTime, index=True)
@@ -60,16 +60,16 @@ class Login(db.Model):
 class Submission(db.Model):
       __tablename__ = 'submission'
       id = db.Column('id', db.Integer, primary_key = True)
-      user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable = False)
+      user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
       text = db.Column(db.String(500))
       result = db.Column(db.String(500))
 
-class Spelling_History(db.Model):
-    __tablename__ = "spelling_history"
-    id = db.Column(db.Integer, primary_key=True)
-    query_text = db.Column(db.String(), nullable=False)
-    query_result = db.Column(db.String(), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+# class Spelling_History(db.Model):
+#     __tablename__ = "spelling_history"
+#     id = db.Column(db.Integer, primary_key=True)
+#     query_text = db.Column(db.String(), nullable=False)
+#     query_result = db.Column(db.String(), nullable=False)
+#     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
 
 
 ##################################################################################################################
@@ -160,32 +160,22 @@ def history():
 
 @app.route('/login_history', methods=['GET', 'POST'])
 def login_history():
-    # if not current_user.is_authenticated:
-    #     return redirect(url_for('login'))
-    # if current_user.username != "admin":
-    #     flash('Not authorized for login history search')
-    #     return redirect(url_for('index'))
-    # form = LoginHistoryForm()
-    # if form.validate_on_submit():
-    #     user = User.query.filter_by(id=form.uid.data).first()
-    #     if user is None:
-    #         flash('No such userid')
-    #         return redirect(url_for('login_history'))
-    #     print("UserID:", user.id)
-    #     logins = user.login_logs(user.id).all()
-    #     return render_template("login_history.html", title='Login History Page', logins=logins)
-    # return render_template('login_history.html', title='Login History', form=form)
+    form = LoginHistoryForm()
+    if current_user.username is not None:
+        admin = False
+        curr_user = User.query.filter(User.username == current_user.username).first()
+        if curr_user.role == "admin":
+            admin = True
+        if admin and form.validate_on_submit():
+            user = User.query.filter(User.id == form.uid.data).first()
+            logins = Login.query.filter(Login.user_id == user.id).all()
+            assert(logins is not None)
+            assert(len(logins) !=0)
+            return render_template("login_history.html", form=None, logins=logins)
+        elif admin:
+            return render_template("login_history.html", form=form, logins=None)
+    return render_template(url_for('spell_check'))
 
-    if session.get('logged_in') == True and session['role'] == 'admin':
-        admin = True
-        if request.method =='GET':
-            queries = Login.query.order_by(Login.id)
-        if request.method =='POST':
-            search_user = request.form['userid'].lower()
-            queries = Login.query.filter_by(user_id =search_user).order_by(Login.id)
-        return render_template('login_history.html', queries=queries, admin=admin)
-    else:
-        return redirect(url_for('spell_check'))
 
 
 @app.route('/spell_check',methods = ['GET', 'POST'])
@@ -205,15 +195,15 @@ def spell_check():
             # create file and set output of check_words to misspelled input text
             with open(filename, 'w') as f:
                 f.write(str(text))
-                f.close()
-                if os.path.isfile(filename):
-                    form.misspelled.data = check_words(filename)
-                    os.remove(filename)
-                    submission = Submission(user_id, text, form.misspelled.data)
-                    db.session.add(submission)
-                    db.session.commit()
-                else:
-                    print("Error: %s file not found" % filename)
+            if os.path.isfile(filename):
+                form.misspelled.data = check_words(filename)
+                os.remove(filename)
+                submission = Submission(user_id = user_id, text=text, result=form.misspelled.data)
+
+                db.session.add(submission)
+                db.session.commit()
+            else:
+                print("Error: %s file not found" % filename)
 
         return render_template("spell_check.html", form=form)
     else:
