@@ -1,28 +1,35 @@
-{% extends "bootstrap/base.html" %}
-{% import "bootstrap/wtf.html" as wtf %}
 
-{% block title %}
-Login
-{% endblock %}
+<html>
+    <head>
+        <title>History</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+    </head>
+    <body>
 
-{% block styles %}
-{{super()}}
-<link rel="stylesheet" href="{{url_for('.static', filename='signin.css')}}">
-{% endblock %}
+        <h1>History</h1>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <p id="{{ category }}">{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}    
 
-{% block content %}
-    <div class="container">
+        {% if user.admin %}
+            <form action = "/history" method = "POST">
+                {{ form.csrf_token }}
+                {% for error in form.uname.errors %}
+                    <p class="error">[{{ error }}]</p>
+                {% endfor %}      
+                <p>{{ form.uname.label }}: {{ form.uname(size=20) }} {{ form.submit() }}</p>
+            </form>
+        {% endif %} 
 
-      <form class="form-signin" method="POST" action="/history">
-        <h2 class="form-signin-heading">History</h2>
-        {{ form.hidden_tag() }}
-        {{ wtf.form_field(form.username) }}
-        {{ wtf.form_field(form.password) }}
-        {{ wtf.form_field(form.twofa) }}
-
-        <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
-      </form>
-
-    </div> <!-- /container -->
-<p id="result">{{ result }} </p>
-{% endblock %}
+        <h3>Submissions made by {{ user.username }}: <span id="numqueries">{{ count }}</span></h3>
+        
+        {% for submission in submissions %}
+            <p><a class="query_link" id="query{{ submission.id}}" href="/history/query{{ submission.id}}">Query {{ submission.id }}</a></p>
+        {% endfor %}
+    </body>
+</html>

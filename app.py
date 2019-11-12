@@ -5,7 +5,7 @@ import subprocess, random
 import os
 from datetime import datetime
 from wtforms import StringField, PasswordField, BooleanField, validators, SubmitField, TextAreaField, IntegerField
-from wtforms.validators import InputRequired, Email, Length, ValidationError, DataRequired
+from wtforms.validators import InputRequired, Email, Length, ValidationError, DataRequired, Regexp
 from flask_sqlalchemy  import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -64,6 +64,17 @@ class Submission(db.Model):
       text = db.Column(db.String(500))
       result = db.Column(db.String(500))
 
+class QueryHistory(db.Model):
+    __tablename__ = 'queries'
+    queryid = db.Column(db.Integer, nullable=False, autoincrement = True, primary_key=True)
+    querytext = db.Column(db.String(4000), nullable=False)
+    queryresult = db.Column(db.String(4000), nullable=False)
+    username = db.Column(db.String(20), nullable=False)
+
+
+
+
+
 # class Spelling_History(db.Model):
 #     __tablename__ = "spelling_history"
 #     id = db.Column(db.Integer, primary_key=True)
@@ -85,9 +96,10 @@ class LoginForm(FlaskForm):
     twofa = StringField('two_fa', id='2fa', validators=[validate_phone, validators.Optional()])
     remember = BooleanField('remember me')
 
+
 class HistoryForm(FlaskForm):
-    uname = StringField('Username', validators=[DataRequired()], id="userquery")
-    submit = SubmitField('Search')
+    uname = StringField('Username', validators=[InputRequired(), Regexp(r'^[\w.@+-]+$'), Length(min=4, max=25)], id='userquery')
+    submit = SubmitField('Submit')
 
 class LoginHistoryForm(FlaskForm):
     uid = StringField('UserID', validators=[DataRequired()], id="userid")
@@ -146,16 +158,34 @@ def check_words(filename):
     return stdout
 
 
-@app.route('/history', methods=['GET'])
-def history():
-    if not current_user.is_authenticated:
-        return redirect(url_for('login'))
-    if current_user.username == "admin":
-        return redirect(url_for('history_query'))
+@app.route("/history", defaults={"query": None}, methods=['POST', 'GET'])
+@app.route("/history/<query>")
+def history(query):
+    if 'user_id' in session:
+        form = HistoryForm()
+        user = User.query.filter_by(id=session['user_id']).first()
+        if query != None:
+            submission_id = int(query.replace("query", ""))
+            # if user is admin, allow access to any submission by not filtering on user id
+            if user.role:
+                submission = Submission.query.filter_by(id=submission_id).first()
+                user = User.query.filter_by(id=submission.user_id).first()
+            else:
+                submission = Submission.query.filter_by(user_id=session['user_id'], id=submission_id).first()
+            if submission is None:
+                flash("Sorry, that submission doesn't exist", "failure")
+            return render_template("submission.html", submission=submission, user=user)
+        else:
+            if user.role and form.validate_on_submit():
+                submissions = Submission.query.join(User).filter_by(username=form.uname.data).all()
+                count = Submission.query.join(User).filter_by(username=form.uname.data).count()
+            else:
+                submissions = Submission.query.filter_by(user_id=session['user_id']).all()
+                count = Submission.query.filter_by(user_id=session['user_id']).count()
+
+            return render_template("history.html", submissions=submissions, count=count, user=user, form=form)
     else:
-        posts = current_user.spellcheck_posts().all()
-        posts_count = current_user.spellcheck_posts().count()
-        return render_template("history.html", title='History Page', posts=posts, count=posts_count)
+        return redirect(url_for('login'))
 
 
 @app.route('/login_history', methods=['GET', 'POST'])
